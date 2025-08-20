@@ -1,0 +1,12 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "qte_thesis"
+version = "0.1.0"
+description = "Simulating the DS and OS Estimator from Belloni, Chernozhukov and Kato (2019)."
+readme = "README.md"
+authors = [
+    { name = "Torben", email = "thaferkamp@gmx.de" }
+]
