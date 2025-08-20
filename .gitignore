@@ -211,3 +211,6 @@ bld/
 
 # data
 src/data
+
+# bin
+bin/
