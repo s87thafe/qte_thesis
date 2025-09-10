@@ -18,6 +18,8 @@ class AdaptiveLasso:
 
     theta_: Optional[np.ndarray] = None
     theta_post_: Optional[np.ndarray] = None
+    n_nonzero_: Optional[int] = None
+    n_nonzero_post_: Optional[int] = None
 
     @staticmethod
     def lambda_lasso(X: np.ndarray, gamma: Optional[float] = None) -> float:
@@ -65,4 +67,6 @@ class AdaptiveLasso:
         theta_lasso = self.weighted_lasso(X, d, f_hat, psi_updated, solver=self.solver)
         self.theta_ = theta_lasso
         self.theta_post_ = theta_post
+        self.n_nonzero_ = int(np.count_nonzero(theta_lasso))
+        self.n_nonzero_post_ = int(np.count_nonzero(theta_post))
         return self

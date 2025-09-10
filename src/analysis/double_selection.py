@@ -19,6 +19,7 @@ class WeightedDoubleSelection:
     tau: float = 0.5
 
     theta_: Optional[np.ndarray] = None
+    n_nonzero_: Optional[int] = None
 
     def fit(self, X: np.ndarray, d: np.ndarray, y: np.ndarray) -> "WeightedDoubleSelection":
         qr = PenalizedQuantileRegression(tau=self.tau)
@@ -30,7 +31,7 @@ class WeightedDoubleSelection:
         psi_diag = qr.compute_diagonal_psi(d, X)
         lambda_tau = qr.compute_penalty_parameter(d, X, psi_diag, self.tau)
         l1_threshold = lambda_tau / np.sqrt(np.mean(X ** 2, axis=0))
-        mask = ((theta_lasso != 0) & (np.abs(theta_l1[1:]) > l1_threshold.reshape(-1, 1))).ravel()
+        mask = ((np.abs(theta_lasso) > 0)|(np.abs(theta_l1[1:]) > l1_threshold.reshape(-1, 1))).ravel()
         X_selected = X[:, mask]
         alpha = cp.Variable(name="alpha")
         if X_selected.shape[1] > 0:
@@ -46,6 +47,7 @@ class WeightedDoubleSelection:
         if beta is not None:
             beta_full[mask, 0] = np.ravel(beta.value)
         self.theta_ = np.vstack((np.array([[alpha_val]]), beta_full))
+        self.n_nonzero_ = int(np.count_nonzero(beta_full))
         return self
 
     def predict(self, X: np.ndarray, d: np.ndarray) -> np.ndarray:

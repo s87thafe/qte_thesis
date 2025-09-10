@@ -69,7 +69,7 @@ class PenalizedQuantileRegression:
         psi_diag = self.compute_diagonal_psi(d, X)
         lambda_tau = self.compute_penalty_parameter(
             d, X, psi_diag, self.tau, self.gamma, self.n_sim, self.random_state
-        ) / n
+        )/n
         penalty = lambda_tau * cp.norm(psi_diag @ theta, 1)
         u = y - d * theta[0] - X @ theta[1:]
         check = cp.mean(cp.maximum(self.tau * u, (self.tau - 1) * u))

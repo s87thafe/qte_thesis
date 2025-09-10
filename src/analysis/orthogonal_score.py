@@ -20,6 +20,7 @@ class OrthogonalScoreEstimator:
     tau: float = 0.5
 
     theta_: Optional[np.ndarray] = None
+    n_nonzero_: Optional[int] = None
 
     def fit(self, X: np.ndarray, d: np.ndarray, y: np.ndarray) -> "OrthogonalScoreEstimator":
         qr = PenalizedQuantileRegression(tau=self.tau)
@@ -56,6 +57,7 @@ class OrthogonalScoreEstimator:
         res = minimize_scalar(score)
         alpha_os = res.x
         self.theta_ = np.vstack((np.array([[alpha_os]]), beta_tilde_full))
+        self.n_nonzero_ = int(np.count_nonzero(beta_tilde_full))
         return self
 
     def predict(self, X: np.ndarray, d: np.ndarray) -> np.ndarray:
