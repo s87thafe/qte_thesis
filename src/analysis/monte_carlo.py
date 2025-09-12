@@ -1,28 +1,3 @@
-"""Monte Carlo simulation framework for treatment effect estimators.
-
-This module provides a convenience function :func:`run_simulation` that
-compares the orthogonal score (OS) and weighted double selection (DS)
-estimators across a collection of design parameters.  For each scenario the
-function repeatedly simulates data, fits the estimators and evaluates a range
-of performance metrics such as relative bias, standard deviation, confidence
-interval coverage and average support size.
-
-The simulation varies
-
-* estimator: Orthogonal Score vs Weighted Double Selection;
-* standard errors: ``sigma1``, ``sigma2`` and ``sigma3`` from
-  :class:`analysis.standard_error.StandardErrorEstimator`;
-* confidence intervals: Wald (using the three standard errors) and the score
-  based interval;
-* data generating process: homoscedastic (``mu=0``) and heteroscedastic
-  (``mu>0``);
-* quantile levels ``tau`` as well as sample sizes ``n`` and number of
-  covariates ``p``.
-
-The function returns a :class:`pandas.DataFrame` summarising the Monte Carlo
-results for every combination of the above dimensions.
-"""
-
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -69,29 +44,18 @@ class SimulationConfig:
     seed: int | None = None
 
 
-# ---------------------------------------------------------------------------
-# Core simulation routine
-# ---------------------------------------------------------------------------
 
 def run_simulation(cfg: SimulationConfig) -> pd.DataFrame:
-    """Run the Monte Carlo study and return a dataframe of summary metrics.
-
-    The resulting dataframe contains one row for each combination of
-    estimator, standard error, confidence interval type and design parameters.
-    Columns include relative bias, standard deviation, coverage probability of
-    the nominal 95\% interval, average interval length and average selected
-    support size.
-    """
+    """Run the Monte Carlo study and return a dataframe of summary metrics."""
 
     rng = np.random.default_rng(cfg.seed)
 
-    records: Dict[tuple, List[Dict[str, Any]]] = {}
+    rows: List[Dict[str, Any]] = []
 
     # Iterate over all design parameters
     for n, p, tau, mu in product(cfg.n_vals, cfg.p_vals, cfg.taus, cfg.mu_vals):
-        for sim in range(cfg.n_sim):
-            # Draw a fresh seed for every replication
-            seed = int(rng.integers(1e9))
+        for rep in range(cfg.n_sim):
+            seed = int(rng.integers(1_000_000_000))
             y, d, X, *_ = sim_dgp(n=n, p=p, mu=mu, alpha=cfg.alpha_true, seed=seed)
             y = y.reshape(-1, 1)
             d = d.reshape(-1, 1)
@@ -100,72 +64,63 @@ def run_simulation(cfg: SimulationConfig) -> pd.DataFrame:
                 ("DS", WeightedDoubleSelection),
                 ("OS", OrthogonalScoreEstimator),
             ]:
-                estimator = Est(tau=tau).fit(X, d, y)
-                alpha_hat = float(estimator.theta_[0, 0])
-                support = int(estimator.n_nonzero_)
+                est = Est(tau=tau).fit(X, d, y)
+                alpha_hat = float(est.theta_[0, 0])
+                support = int(est.n_nonzero_)
 
                 se_est = StandardErrorEstimator(tau=tau)
 
-                # Wald intervals for each of the three standard errors
-                se_funcs = ["sigma1", "sigma2", "sigma3"]
-                for se_name in se_funcs:
+                # Wald intervals for each of the three SEs
+                for se_name in ["sigma1", "sigma2", "sigma3"]:
                     lo, hi = se_est.ci_wald(alpha_hat, X, d, y, which=se_name)
-                    key = (est_name, n, p, tau, mu, "wald", se_name)
-                    records.setdefault(key, []).append(
+                    sigma_hat = float(getattr(se_est, f"se_{se_name}")(X, d, y))  # asymptotic σ̂_k
+                    se_used = float(sigma_hat / np.sqrt(n))                      # finite-sample SE used
+                    rows.append(
                         {
+                            "rep": rep,
+                            "seed": seed,
+                            "estimator": est_name,
+                            "n": n,
+                            "p": p,
+                            "tau": tau,
+                            "mu": mu,
+                            "ci": "wald",
+                            "se": se_name,
+                            "alpha_true": cfg.alpha_true,
                             "alpha_hat": alpha_hat,
-                            "lo": lo,
-                            "hi": hi,
+                            "lo": float(lo),
+                            "hi": float(hi),
+                            "covered": int(lo <= cfg.alpha_true <= hi),
+                            "ci_length": float(hi - lo),
                             "support": support,
+                            "sigma_hat": sigma_hat,
+                            "se_used": se_used,
                         }
                     )
 
-                # Score based interval
-                lo, hi = se_est.ci_score(X, d, y, which=estimator.__class__.__name__)
-                key = (est_name, n, p, tau, mu, "score", "na")
-                records.setdefault(key, []).append(
+                # Score-based interval (no per-k SE)
+                lo_s, hi_s = se_est.ci_score(X, d, y, which=est.__class__.__name__)
+                rows.append(
                     {
+                        "rep": rep,
+                        "seed": seed,
+                        "estimator": est_name,
+                        "n": n,
+                        "p": p,
+                        "tau": tau,
+                        "mu": mu,
+                        "ci": "score",
+                        "se": "na",
+                        "alpha_true": cfg.alpha_true,
                         "alpha_hat": alpha_hat,
-                        "lo": lo,
-                        "hi": hi,
+                        "lo": float(lo_s),
+                        "hi": float(hi_s),
+                        "covered": int(lo_s <= cfg.alpha_true <= hi_s),
+                        "ci_length": float(hi_s - lo_s),
                         "support": support,
+                        "sigma_hat": float("nan"),
+                        "se_used": float("nan"),
                     }
                 )
-
-    # Compute summary statistics for each scenario
-    rows = []
-    for key, vals in records.items():
-        est_name, n, p, tau, mu, ci, se_name = key
-        alpha_hats = np.array([v["alpha_hat"] for v in vals])
-        supports = np.array([v["support"] for v in vals])
-        covers = np.array([(cfg.alpha_true >= v["lo"]) and (cfg.alpha_true <= v["hi"]) for v in vals])
-        lengths = np.array([v["hi"] - v["lo"] for v in vals])
-
-        mean_alpha = alpha_hats.mean()
-        rel_bias = (mean_alpha - cfg.alpha_true) / cfg.alpha_true
-        std = alpha_hats.std(ddof=1)
-        coverage = covers.mean()
-        mean_length = lengths.mean()
-        mean_support = supports.mean()
-
-        rows.append(
-            {
-                "estimator": est_name,
-                "n": n,
-                "p": p,
-                "tau": tau,
-                "mu": mu,
-                "ci": ci,
-                "se": se_name,
-                "relative_bias": rel_bias,
-                "std": std,
-                "coverage": coverage,
-                "ci_length": mean_length,
-                "support_size": mean_support,
-            }
-        )
-
-    return pd.DataFrame(rows)
-
 
 __all__ = ["SimulationConfig", "run_simulation"]

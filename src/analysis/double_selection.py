@@ -40,7 +40,6 @@ class WeightedDoubleSelection:
         else:
             beta = None
             u = y - d * alpha
-        
         check = cp.mean(cp.multiply(f_hat, self.tau*cp.pos(u) + (1 - self.tau)*cp.pos(-u)))
         cp.Problem(cp.Minimize(check)).solve()
         alpha_val = float(alpha.value)
