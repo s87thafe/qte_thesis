@@ -122,5 +122,7 @@ def run_simulation(cfg: SimulationConfig) -> pd.DataFrame:
                         "se_used": float("nan"),
                     }
                 )
+    df = pd.DataFrame.from_records(rows)
+    return df
 
 __all__ = ["SimulationConfig", "run_simulation"]
