@@ -36,4 +36,4 @@ class ConditionalDensityEstimator:
         q_minus = self.conditional_quantile_function(X, d, y, tau - h)
         denom = np.clip(q_plus - q_minus, 1e-12, np.inf)
         f_hat = 2 * h / denom
-        return np.maximum(f_hat, 0.0)
+        return np.maximum(f_hat, 0)

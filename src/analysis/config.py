@@ -2,14 +2,14 @@
 from pathlib import Path
 
 SRC = Path(__file__).parent.resolve()
-BLD = SRC.joinpath("..", "bld").resolve()
+BLD = SRC.joinpath("..", "..", "bld").resolve()
 
 BLD_data = BLD / "data"
 BLD_figures = BLD / "figures"
 BLD_tables = BLD / "tables"
 
-TEST_DIR = SRC.joinpath("..", "tests").resolve()
-PAPER_DIR = SRC.joinpath("..", "paper").resolve()
+TEST_DIR = SRC.joinpath("..", "..", "tests").resolve()
+PAPER_DIR = SRC.joinpath("..", "..", "paper").resolve()
 
 __all__ = [
     "BLD",
