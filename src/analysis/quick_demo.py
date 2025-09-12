@@ -59,8 +59,5 @@ def quick_demo(n: int = 100, p: int = 100, tau: float = 0.5, alpha_true: float =
     # print(f"weighted_loss  : {weighted_loss}")
 
 
-
-
-
 if __name__ == "__main__":
     quick_demo()

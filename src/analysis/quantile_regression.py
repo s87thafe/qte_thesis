@@ -60,7 +60,7 @@ class PenalizedQuantileRegression:
             scaled = psi_inv @ avg_scores
             sup_norms[i] = np.linalg.norm(scaled, np.inf)
         q = np.quantile(sup_norms, 1 - gamma)
-        return 1.1 * q * n
+        return 1.1 * q
 
     def fit(self, X: np.ndarray, d: np.ndarray, y: np.ndarray) -> "PenalizedQuantileRegression":
         """Fit the penalized quantile regression model."""
@@ -69,7 +69,7 @@ class PenalizedQuantileRegression:
         psi_diag = self.compute_diagonal_psi(d, X)
         lambda_tau = self.compute_penalty_parameter(
             d, X, psi_diag, self.tau, self.gamma, self.n_sim, self.random_state
-        )/n
+        )
         penalty = lambda_tau * cp.norm(psi_diag @ theta, 1)
         u = y - d * theta[0] - X @ theta[1:]
         check = cp.mean(cp.maximum(self.tau * u, (self.tau - 1) * u))

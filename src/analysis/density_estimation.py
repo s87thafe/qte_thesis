@@ -34,5 +34,6 @@ class ConditionalDensityEstimator:
         h = self.bandwidth_selection(X, tau)
         q_plus = self.conditional_quantile_function(X, d, y, tau + h)
         q_minus = self.conditional_quantile_function(X, d, y, tau - h)
-        f_hat = 2 * h / (q_plus - q_minus)
-        return np.where(f_hat < 0, 0, f_hat)
+        denom = np.clip(q_plus - q_minus, 1e-12, np.inf)
+        f_hat = 2 * h / denom
+        return np.maximum(f_hat, 0.0)

@@ -26,7 +26,7 @@ class AdaptiveLasso:
         n, p = X.shape
         gamma = gamma if gamma is not None else 0.05 / n
         q = 1 - gamma / (2 * p)
-        inv = norm.cdf(q) ** (-1)
+        inv = norm.ppf(q)
         return 1.1 * np.sqrt(n) * 2 * inv
 
     @staticmethod
@@ -48,7 +48,7 @@ class AdaptiveLasso:
         lambda_weighted = AdaptiveLasso.lambda_lasso(X) / n
         penalty = lambda_weighted * cp.norm(psi_diag @ theta, 1)
         resid = d - X @ theta
-        weighted_loss = cp.mean(cp.multiply(f_hat, resid ** 2))
+        weighted_loss = cp.mean(cp.multiply(f_hat**2, resid ** 2))
         cp.Problem(cp.Minimize(weighted_loss + penalty)).solve(solver=solver, verbose=False)
         return theta.value
 

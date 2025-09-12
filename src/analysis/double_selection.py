@@ -29,8 +29,8 @@ class WeightedDoubleSelection:
         lasso = AdaptiveLasso().fit(X, d, f_hat)
         theta_lasso = lasso.theta_
         psi_diag = qr.compute_diagonal_psi(d, X)
-        lambda_tau = qr.compute_penalty_parameter(d, X, psi_diag, self.tau)
-        l1_threshold = lambda_tau / np.sqrt(np.mean(X ** 2, axis=0))
+        mu = qr.compute_penalty_parameter(d, X, psi_diag, self.tau)
+        l1_threshold = mu / np.sqrt(np.mean(X ** 2, axis=0))
         mask = ((np.abs(theta_lasso) > 0)|(np.abs(theta_l1[1:]) > l1_threshold.reshape(-1, 1))).ravel()
         X_selected = X[:, mask]
         alpha = cp.Variable(name="alpha")
@@ -40,7 +40,7 @@ class WeightedDoubleSelection:
         else:
             beta = None
             u = y - d * alpha
-        check = cp.mean(cp.maximum(self.tau * u, (self.tau - 1) * u))
+        check = cp.sum(cp.multiply(f_hat, cp.maximum(self.tau * u, (self.tau - 1) * u)))/y.size
         cp.Problem(cp.Minimize(check)).solve()
         alpha_val = float(alpha.value)
         beta_full = np.zeros((X.shape[1], 1))

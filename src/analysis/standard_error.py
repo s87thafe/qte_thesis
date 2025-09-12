@@ -85,7 +85,7 @@ class StandardErrorEstimator:
         if which not in var_map:
             raise ValueError("which must be one of {'sigma1','sigma2','sigma3'}")
         sigma_hat = var_map[which](X, d, y)
-        z = norm.cdf((1-level)/2) ** (-1)
+        z = norm.ppf((1-level)/2)
         half = z * sigma_hat / np.sqrt(n)
         return float(alpha_hat - half), float(alpha_hat + half)
 

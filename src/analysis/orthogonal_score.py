@@ -26,8 +26,8 @@ class OrthogonalScoreEstimator:
         qr = PenalizedQuantileRegression(tau=self.tau)
         theta_l1 = qr.fit(X, d, y).theta_
         psi_diag = qr.compute_diagonal_psi(d, X)
-        lambda_tau = qr.compute_penalty_parameter(d, X, psi_diag, self.tau)
-        l1_threshold = lambda_tau / np.sqrt(np.mean(X ** 2, axis=0))
+        mu = qr.compute_penalty_parameter(d, X, psi_diag, self.tau)
+        l1_threshold = mu / np.sqrt(np.mean(X ** 2, axis=0))
         mask = (np.abs(theta_l1[1:]) > l1_threshold.reshape(-1, 1)).ravel()
         X_selected = X[:, mask]
         alpha_tilde = cp.Variable(name="alpha")
@@ -49,7 +49,7 @@ class OrthogonalScoreEstimator:
 
         def score(alpha: float) -> float:
             ind = (y <= d * alpha + X @ beta_tilde_full).astype(float)
-            psi = self.tau - ind * f_hat * (d - X @ theta_post)
+            psi = (self.tau - ind) * f_hat * (d - X @ theta_post)
             num = abs(np.mean(psi)) ** 2
             den = np.mean(psi ** 2)
             return np.inf if den == 0 else num / den
