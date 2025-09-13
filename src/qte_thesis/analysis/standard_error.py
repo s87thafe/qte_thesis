@@ -87,7 +87,7 @@ class StandardErrorEstimator:
         sigma_hat = var_map[which](X, d, y)
         z = norm.ppf((1-level)/2)
         half = z * sigma_hat / np.sqrt(n)
-        return float(alpha_hat - half), float(alpha_hat + half)
+        return float(alpha_hat - abs(half)), float(alpha_hat + abs(half))
 
     def ci_score(
             self, X: np.ndarray, d: np.ndarray, y: np.ndarray, level: float = 0.95, which: str = "OrthogonalScoreEstimator"

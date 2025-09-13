@@ -8,9 +8,9 @@ import numpy as np
 import pandas as pd
 
 from .dgp import sim_dgp
-from .double_selection import WeightedDoubleSelection
-from .orthogonal_score import OrthogonalScoreEstimator
-from .standard_error import StandardErrorEstimator
+from qte_thesis.analysis.double_selection import WeightedDoubleSelection
+from qte_thesis.analysis.orthogonal_score import OrthogonalScoreEstimator
+from qte_thesis.analysis.standard_error import StandardErrorEstimator
 
 
 @dataclass

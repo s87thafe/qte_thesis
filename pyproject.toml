@@ -10,3 +10,8 @@ readme = "README.md"
 authors = [
     { name = "Torben", email = "thaferkamp@gmx.de" }
 ]
+
+[tool.pytest.ini_options]
+filterwarnings = [
+  'ignore:This use of ``\\*`` has resulted in matrix multiplication:UserWarning:cvxpy.expressions.expression',
+]
