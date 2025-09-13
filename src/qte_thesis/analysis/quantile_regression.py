@@ -71,7 +71,7 @@ class PenalizedQuantileRegression:
             d, X, psi_diag, self.tau, self.gamma, self.n_sim, self.random_state
         )
         penalty = lambda_tau * cp.norm(psi_diag @ theta, 1)
-        u = y - d * theta[0] - X @ theta[1:]
+        u = y - theta[0] * d - X @ theta[1:]
         check = cp.mean(cp.maximum(self.tau * u, (self.tau - 1) * u))
         cp.Problem(cp.Minimize(check + penalty)).solve()
         self.theta_ = theta.value

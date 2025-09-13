@@ -7,6 +7,7 @@ from typing import Iterable, List, Dict, Any
 import numpy as np
 import pandas as pd
 
+
 from .dgp import sim_dgp
 from qte_thesis.analysis.double_selection import WeightedDoubleSelection
 from qte_thesis.analysis.orthogonal_score import OrthogonalScoreEstimator
