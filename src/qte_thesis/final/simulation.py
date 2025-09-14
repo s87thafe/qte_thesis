@@ -4,7 +4,7 @@ from pathlib import Path
 import argparse
 import pandas as pd
 from qte_thesis.config import BLD_data
-from final.monte_carlo import SimulationConfig, run_simulation
+from .monte_carlo import SimulationConfig, run_simulation
 
 def parse_args():
     p = argparse.ArgumentParser()
