@@ -12,8 +12,8 @@ import plotly.graph_objects as go
 
 
 
-def task_run_monte_carlo(
-    produces: Path = BLD_data / "monte_carlo.csv",
+def task_run_monte_carlo_v1(
+    produces: Path = BLD_data / "monte_carlo_v1.csv",
 ) -> None:
     """Run the Monte Carlo simulation and store results as a CSV file."""
     cfg = SimulationConfig(

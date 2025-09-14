@@ -12,5 +12,5 @@ authors = [
 ]
 
 [tool.pytask.ini_options]
-parallel_backend = "dask"
-n_workers = 480   # e.g., 5×96, or just "auto"
+n_workers = "auto"
+parallel_backend = "loky"
