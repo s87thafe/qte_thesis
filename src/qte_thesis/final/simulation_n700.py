@@ -14,7 +14,7 @@ def parse_args():
 def run_one(sim_id: int, produces: Path) -> None:
     # Base config; we override n_sim and seed below
     base = SimulationConfig(
-        n_vals=[100],
+        n_vals=[700],
         p_vals=[500, 1000],
         taus=[0.05, 0.5, 0.95],
         mu_vals=[0.0, 1.0],
@@ -29,5 +29,5 @@ def run_one(sim_id: int, produces: Path) -> None:
 
 if __name__ == "__main__":
     args = parse_args()
-    out = BLD_data / f"monte_carlo_part_{args.sim_id:03d}_n100.csv"
+    out = BLD_data / f"monte_carlo_part_{args.sim_id:03d}_n700.csv"
     run_one(args.sim_id, out)
