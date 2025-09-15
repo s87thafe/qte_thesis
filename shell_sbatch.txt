@@ -16,6 +16,5 @@ source ~/.bashrc 2>/dev/null || true
 eval "$(conda shell.bash hook)"
 conda activate qte_thesis
 export OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 BLIS_NUM_THREADS=1 NUMEXPR_NUM_THREADS=1
-srun python -m src.qte_thesis.final.simulation \
-  --sim-id="${SLURM_ARRAY_TASK_ID}" \
-  --out "${PWD}/BLD_data/monte_carlo_part_${SLURM_ARRAY_TASK_ID}.csv"
+srun python -m src.qte_thesis.final.simulation_nX \
+  --sim-id="${SLURM_ARRAY_TASK_ID}"

@@ -53,7 +53,10 @@ class StandardErrorEstimator:
         Mtil = M * f_hat
         H = (Mtil.T @ Mtil) / y.size
         Hinv = np.linalg.inv(H)
-        return float(np.sqrt(self.tau * (1 - self.tau) * Hinv[0, 0]))
+        val = self.tau * (1 - self.tau) * Hinv[0, 0]
+        if not np.isfinite(val) or val <= 0.0:
+            return np.nan
+        return float(np.sqrt(val))
 
     def se_sigma3(self, X: np.ndarray, d: np.ndarray, y: np.ndarray) -> float:
         """Return ``sigma_{3n}`` as defined in equation (2.15)."""

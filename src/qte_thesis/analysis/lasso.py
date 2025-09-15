@@ -49,7 +49,13 @@ class AdaptiveLasso:
         penalty = lambda_weighted * cp.norm(psi_diag @ theta, 1)
         resid = d - X @ theta
         weighted_loss = cp.mean(cp.multiply(f_hat**2, resid ** 2))
-        cp.Problem(cp.Minimize(weighted_loss + penalty)).solve(solver=solver, verbose=False)
+        prob = cp.Problem(cp.Minimize(weighted_loss + penalty))
+        try:
+            prob.solve(solver=(solver or cp.CLARABEL))
+        except Exception:
+            return np.full((p, 1), np.nan)
+        if theta.value is None:
+            return np.full((p, 1), np.nan)
         return theta.value
 
     @staticmethod
