@@ -10,7 +10,7 @@ from qte_thesis.config import BLD_data, BLD_figures
 
 
 def task_plot_bias_boxplots(
-    depends: Path = BLD_data / "monte_carlo.csv",
+    depends: Path = BLD_data / "monte_carlo_merged.csv",
     produces: Path = BLD_figures / "bias_boxplots" / "box_validation.txt",
 ) -> None:
     """Create bias-vs-n boxplots for each parameter combination.
@@ -63,7 +63,7 @@ def task_plot_bias_boxplots(
 
 
 def task_plot_mse(   
-    depends: Path = BLD_data / "monte_carlo.csv",
+    depends: Path = BLD_data / "monte_carlo_merged.csv",
     produces: Path = BLD_figures / "mse_plots" / "mse_validation.txt",
 ) -> None:
     """
@@ -117,7 +117,7 @@ def task_plot_mse(
         produces.write_text("All MSE plots generated")
 
 def task_plot_coverage_lines(
-    depends: Path = BLD_data / "monte_carlo.csv",
+    depends: Path = BLD_data / "monte_carlo_merged.csv",
     produces: Path = BLD_figures / "coverage_lines" / "coverage_validation.txt",
 ) -> None:
     """Create coverage-vs-n line plots using precomputed 'covered' and 'ci'."""
@@ -183,7 +183,7 @@ def task_plot_coverage_lines(
 
 
 def task_plot_ci_length(
-    depends: Path = BLD_data / "monte_carlo.csv",
+    depends: Path = BLD_data / "monte_carlo_merged.csv",
     produces: Path = BLD_figures / "ci_length_plots" / "ci_validation.txt",
 ) -> None:
     """Create CI-length-vs-n plots for each parameter combination."""
@@ -251,7 +251,7 @@ def task_plot_ci_length(
 
 
 def task_plot_bias_boxplots(
-    depends: Path = BLD_data / "monte_carlo.csv",
+    depends: Path = BLD_data / "monte_carlo_merged.csv",
     produces: Path = BLD_figures / "bias_boxplots" / "box_validation.txt",
 ) -> None:
     """Create QQ plots of studentized √n-errors vs N(0,1) for each parameter combination."""

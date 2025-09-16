@@ -10,7 +10,3 @@ readme = "README.md"
 authors = [
     { name = "Torben", email = "thaferkamp@gmx.de" }
 ]
-
-[tool.pytask.ini_options]
-n_workers = "auto"
-parallel_backend = "loky"
