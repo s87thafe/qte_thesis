@@ -59,6 +59,8 @@ def run_os(tau: float, csv_source: Path, produces: Path, seed: int | None = None
     var = X.var(axis=0)
     keep = var > eps
     X = X[:, keep]
+    _, uniq_idx = np.unique(X, axis=1, return_index=True)
+    X = X[:, np.sort(uniq_idx)]
 
     X = np.column_stack([np.ones(n), X])
 
@@ -69,26 +71,36 @@ def run_os(tau: float, csv_source: Path, produces: Path, seed: int | None = None
     se_est = StandardErrorEstimator(tau=tau)
 
     rows = []
+    rows = []
     for se_name in ["sigma1", "sigma2", "sigma3"]:
-        lo, hi = se_est.ci_wald(alpha_hat, X, d, y, which=se_name)
-        sigma_hat = float(getattr(se_est, f"se_{se_name}")(X, d, y))
-        se_used = float(sigma_hat / np.sqrt(n))
-        rows.append({
-            "estimator": "OS",
-            "tau": tau,
-            "ci": "wald",
-            "se": se_name,
-            "alpha_hat": alpha_hat,
-            "lo": float(lo),
-            "hi": float(hi),
-            "ci_length": float(hi - lo),
-            "support": support,
-            "sigma_hat": sigma_hat,
-            "se_used": se_used,
-            "subsample_id": subsample_id,
-            "n_subsample": len(ipumps_data),
-            "seed": seed,
-        })
+        try:
+            lo, hi = se_est.ci_wald(alpha_hat, X, d, y, which=se_name)
+            sigma_hat = float(getattr(se_est, f"se_{se_name}")(X, d, y))
+            se_used = float(sigma_hat / np.sqrt(n))
+            rows.append({
+                "estimator": "OS",
+                "tau": tau,
+                "ci": "wald",
+                "se": se_name,
+                "alpha_hat": alpha_hat,
+                "lo": float(lo),
+                "hi": float(hi),
+                "ci_length": float(hi - lo),
+                "support": support,
+                "sigma_hat": sigma_hat,
+                "se_used": se_used,
+                "subsample_id": subsample_id,
+                "n_subsample": len(ipumps_data),
+                "seed": seed,
+            })
+        except Exception as e:
+            rows.append({
+                "estimator": "OS", "tau": tau, "ci": "wald", "se": se_name,
+                "alpha_hat": alpha_hat, "lo": np.nan, "hi": np.nan,
+                "ci_length": np.nan, "support": support,
+                "sigma_hat": np.nan, "se_used": np.nan,
+                "error": f"{type(e).__name__}: {e}"
+            })
     produces.parent.mkdir(parents=True, exist_ok=True)
     pd.DataFrame(rows).to_csv(produces, index=False)
 
