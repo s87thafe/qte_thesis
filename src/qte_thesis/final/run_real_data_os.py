@@ -55,6 +55,11 @@ def run_os(tau: float, csv_source: Path, produces: Path, seed: int | None = None
     keep = np.setdiff1d(np.arange(X.shape[1]), drop_X_idx)
     X = X[:, keep]
 
+    eps = 1e-12
+    var = X.var(axis=0)
+    keep = var > eps
+    X = X[:, keep]
+
     X = np.column_stack([np.ones(n), X])
 
     est = OrthogonalScoreEstimator(tau=tau).fit(X, d, y)
