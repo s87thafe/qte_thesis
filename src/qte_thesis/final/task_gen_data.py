@@ -4,6 +4,7 @@ import pandas as pd
 from qte_thesis.config import BLD_data
 from itertools import product, combinations
 import numpy as np
+from qte_thesis.analysis.quantile_regression import PenalizedQuantileRegression
 
 def task_generate_dataset(
     depends_1: Path = BLD_data/"cps_2020_2024.csv",
@@ -24,7 +25,7 @@ def task_generate_dataset(
     # Generate hourly wage
     employed["HOURLY_WAGE"] = employed["INCWAGE"]/(employed["UHRSWORKLY"]*employed["WKSWORK1"])
     # Drop outliers
-    employed = employed[(employed["HOURLY_WAGE"]<3)|(employed["HOURLY_WAGE"]>200)]
+    employed = employed[(employed["HOURLY_WAGE"]>3)|(employed["HOURLY_WAGE"]<200)]
 
     minimum_wage = pd.read_csv(depends_2)
     # drop entries with no changing minimum wage
@@ -95,33 +96,31 @@ def task_generate_dataset(
         dummy_na=False        
     )
 
-    def add_interactions(df, left_prefix, right_prefix, sep="_"):
-        left = [c for c in df.columns if c.startswith(f"{left_prefix}{sep}")]
-        right = [c for c in df.columns if c.startswith(f"{right_prefix}{sep}")]
-        for a, b in product(left, right):
-            df[f"{a}*{b}"] = df[a].values * df[b].values
-        return df
+    # def add_interactions(df, left_prefix, right_prefix, sep="_"):
+    #     left = [c for c in df.columns if c.startswith(f"{left_prefix}{sep}")]
+    #     right = [c for c in df.columns if c.startswith(f"{right_prefix}{sep}")]
+    #     for a, b in product(left, right):
+    #         df[f"{a}*{b}"] = df[a].values * df[b].values
+    #     return df
 
-    control_interactions = ['SEX', 'RACE', 'MARST', "EDUC", "CITIZEN"]
+    # control_interactions = ['SEX', 'RACE', "EDUC","MARST","CITIZEN"]
 
-    for left, right in combinations(control_interactions, 2):
-        employed = add_interactions(employed, left, right)
+    # for left, right in combinations(control_interactions, 2):
+    #     employed = add_interactions(employed, left, right)
 
-    def add_age_interactions(df, dummy_prefix="STATEFIP", sep="_"):
-        dummies = [
-            c for c in df.columns
-            if c.startswith(f"{dummy_prefix}{sep}") and ("*" not in c)
-        ]
-        age = pd.to_numeric(df["AGE"], errors="coerce")
-        age_c = (age - age.mean()).to_numpy(dtype=np.float64)
-        for d in dummies:
-            z = pd.to_numeric(df[d], errors="coerce").fillna(0).to_numpy(dtype=np.float64)
-            df[f"AGE*{d}"] = age_c * z
-        return df
+    # def add_age_interactions(df, dummy_prefix="STATEFIP", sep="_"):
+    #     dummies = [
+    #         c for c in df.columns
+    #         if c.startswith(f"{dummy_prefix}{sep}") and ("*" not in c)
+    #     ]
+    #     age = pd.to_numeric(df["AGE"], errors="coerce")
+    #     age_c = (age - age.mean()).to_numpy(dtype=np.float64)
+    #     for d in dummies:
+    #         z = pd.to_numeric(df[d], errors="coerce").fillna(0).to_numpy(dtype=np.float64)
+    #         df[f"AGE*{d}"] = age_c * z
+    #     return df
 
-    for pref in control_interactions:
-        employed = add_age_interactions(employed, pref)
+    # for pref in control_interactions:
+    #     employed = add_age_interactions(employed, pref)
 
-    employed = employed.dropna(axis=1, how="all")
-    employed["Intercept"] = 1
     employed.to_csv(produces, index=False)

@@ -10,7 +10,7 @@ from qte_thesis.config import BLD_data, BLD_figures
 
 
 def task_plot_bias_boxplots(
-    depends: Path = BLD_data / "monte_carlo_merged.csv",
+    depends: Path = BLD_data / "monte_carlo_merged_v2.csv",
     produces: Path = BLD_figures / "bias_boxplots" / "box_validation.txt",
 ) -> None:
     """Create bias-vs-n boxplots for each parameter combination.
@@ -63,7 +63,7 @@ def task_plot_bias_boxplots(
 
 
 def task_plot_mse(   
-    depends: Path = BLD_data / "monte_carlo_merged.csv",
+    depends: Path = BLD_data / "monte_carlo_merged_v2.csv",
     produces: Path = BLD_figures / "mse_plots" / "mse_validation.txt",
 ) -> None:
     """
@@ -117,7 +117,7 @@ def task_plot_mse(
         produces.write_text("All MSE plots generated")
 
 def task_plot_coverage_lines(
-    depends: Path = BLD_data / "monte_carlo_merged.csv",
+    depends: Path = BLD_data / "monte_carlo_merged_v2.csv",
     produces: Path = BLD_figures / "coverage_lines" / "coverage_validation.txt",
 ) -> None:
     """Create coverage-vs-n line plots using precomputed 'covered' and 'ci'."""
@@ -183,7 +183,7 @@ def task_plot_coverage_lines(
 
 
 def task_plot_ci_length(
-    depends: Path = BLD_data / "monte_carlo_merged.csv",
+    depends: Path = BLD_data / "monte_carlo_merged_v2.csv",
     produces: Path = BLD_figures / "ci_length_plots" / "ci_validation.txt",
 ) -> None:
     """Create CI-length-vs-n plots for each parameter combination."""
@@ -250,58 +250,58 @@ def task_plot_ci_length(
         produces.write_text("All CI length plots generated")
 
 
-def task_plot_bias_boxplots(
-    depends: Path = BLD_data / "monte_carlo_merged.csv",
-    produces: Path = BLD_figures / "bias_boxplots" / "box_validation.txt",
-) -> None:
-    """Create QQ plots of studentized √n-errors vs N(0,1) for each parameter combination."""
+# def task_plot_bias_boxplots(
+#     depends: Path = BLD_data / "monte_carlo_merged.csv",
+#     produces: Path = BLD_figures / "bias_boxplots" / "box_validation.txt",
+# ) -> None:
+#     """Create QQ plots of studentized √n-errors vs N(0,1) for each parameter combination."""
 
-    df = pd.read_csv(depends)
-    df["_t"] = np.sqrt(df["n"].astype(float)) * (
-        df["alpha_hat"].astype(float) - df["alpha_true"].astype(float)
-    ) / df["sigma_hat"].astype(float)
+#     df = pd.read_csv(depends)
+#     df["_t"] = np.sqrt(df["n"].astype(float)) * (
+#         df["alpha_hat"].astype(float) - df["alpha_true"].astype(float)
+#     ) / df["sigma_hat"].astype(float)
 
-    produces.parent.mkdir(parents=True, exist_ok=True)
+#     produces.parent.mkdir(parents=True, exist_ok=True)
 
-    group_cols = ["estimator", "se", "p", "mu", "tau", "n"]
-    generated_filenames = []
+#     group_cols = ["estimator", "se", "p", "mu", "tau", "n"]
+#     generated_filenames = []
 
-    for key, dfi in df.groupby(group_cols):
-        estimator, se_name, p_val, mu_val, tau_val, n_val = key
+#     for key, dfi in df.groupby(group_cols):
+#         estimator, se_name, p_val, mu_val, tau_val, n_val = key
 
-        s = np.sort(dfi["_t"].to_numpy(dtype=float))
-        m = s.size
-        if m == 0:
-            continue
-        probs = (np.arange(1, m + 1) - 0.5) / m
-        theo = norm.ppf(probs)  # SciPy
+#         s = np.sort(dfi["_t"].to_numpy(dtype=float))
+#         m = s.size
+#         if m == 0:
+#             continue
+#         probs = (np.arange(1, m + 1) - 0.5) / m
+#         theo = norm.ppf(probs)  # SciPy
 
-        qqdf = pd.DataFrame({"theoretical": theo, "sample": s})
-        fig = px.scatter(qqdf, x="theoretical", y="sample")
+#         qqdf = pd.DataFrame({"theoretical": theo, "sample": s})
+#         fig = px.scatter(qqdf, x="theoretical", y="sample")
 
-        lo = float(min(qqdf["theoretical"].min(), qqdf["sample"].min()))
-        hi = float(max(qqdf["theoretical"].max(), qqdf["sample"].max()))
-        # 45° line without go.Scatter
-        fig.add_shape(type="line", x0=lo, y0=lo, x1=hi, y1=hi)
+#         lo = float(min(qqdf["theoretical"].min(), qqdf["sample"].min()))
+#         hi = float(max(qqdf["theoretical"].max(), qqdf["sample"].max()))
+#         # 45° line without go.Scatter
+#         fig.add_shape(type="line", x0=lo, y0=lo, x1=hi, y1=hi)
 
-        fig.update_layout(
-            title=(
-                "QQ plot: √n(α̂−α)/σ̂ vs N(0,1) "
-                f"(estimator={estimator}, se={se_name}, p={p_val}, μ={mu_val}, τ={tau_val}, n={n_val})"
-            ),
-            xaxis_title="Theoretical N(0,1) quantiles",
-            yaxis_title="Sample quantiles",
-            showlegend=False,
-        )
+#         fig.update_layout(
+#             title=(
+#                 "QQ plot: √n(α̂−α)/σ̂ vs N(0,1) "
+#                 f"(estimator={estimator}, se={se_name}, p={p_val}, μ={mu_val}, τ={tau_val}, n={n_val})"
+#             ),
+#             xaxis_title="Theoretical N(0,1) quantiles",
+#             yaxis_title="Sample quantiles",
+#             showlegend=False,
+#         )
 
-        file_name = (
-            f"qq_estimator-{estimator}_se-{se_name}_p-{p_val}_mu-{mu_val}_tau-{tau_val}_n-{n_val}.png"
-        )
-        fig.write_image(produces.parent / file_name)
-        generated_filenames.append(file_name)
+#         file_name = (
+#             f"qq_estimator-{estimator}_se-{se_name}_p-{p_val}_mu-{mu_val}_tau-{tau_val}_n-{n_val}.png"
+#         )
+#         fig.write_image(produces.parent / file_name)
+#         generated_filenames.append(file_name)
 
-    expected = len(generated_filenames)
-    actual_pngs = sorted(p.name for p in produces.parent.glob("*.png"))
-    found = len(actual_pngs)
-    if expected == found:
-        produces.write_text("All QQ plots generated")
+#     expected = len(generated_filenames)
+#     actual_pngs = sorted(p.name for p in produces.parent.glob("*.png"))
+#     found = len(actual_pngs)
+#     if expected == found:
+#         produces.write_text("All QQ plots generated")
