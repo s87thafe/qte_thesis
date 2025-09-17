@@ -100,6 +100,25 @@ def run_ds(tau: float, csv_source: Path, produces: Path, seed: int | None = None
                 "sigma_hat": np.nan, "se_used": np.nan,
                 "error": f"{type(e).__name__}: {e}"
             })
+    lo_s, hi_s = se_est.ci_score(X, d, y, which=est.__class__.__name__)
+    rows.append(
+        {
+            "estimator": "DS",
+            "tau": tau,
+            "ci": "score",
+            "se": "na",
+            "alpha_hat": alpha_hat,
+            "lo": float(lo_s),
+            "hi": float(hi_s),
+            "ci_length": float(hi_s - lo_s),
+            "support": support,
+            "sigma_hat": float("nan"),
+            "se_used": float("nan"),
+            "subsample_id": subsample_id,
+            "n_subsample": len(ipumps_data),
+            "seed": seed,
+        }
+    )
     produces.parent.mkdir(parents=True, exist_ok=True)
     pd.DataFrame(rows).to_csv(produces, index=False)
 

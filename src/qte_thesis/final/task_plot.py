@@ -21,7 +21,7 @@ def task_plot_bias_boxplots(
     """
 
     df = pd.read_csv(depends)
-    df["bias"] = df["alpha_hat"] - df["alpha_true"]
+    # df["bias"] = df["alpha_hat"] - df["alpha_true"]
 
     produces.parent.mkdir(parents=True, exist_ok=True)
 
@@ -32,9 +32,9 @@ def task_plot_bias_boxplots(
         estimator, p_val, mu_val, tau_val = key
         alpha_true = dfi["alpha_true"].iloc[0]
 
-        fig = px.box(dfi, x="n", y="bias")
+        fig = px.box(dfi, x="n", y="alpha_hat")
         fig.add_hline(
-            y=0,
+            y=1,
             line_dash="dash",
             annotation_text=f"α={alpha_true}",
             annotation_position="top left",
@@ -46,6 +46,7 @@ def task_plot_bias_boxplots(
             ),
             xaxis_title="n",
             yaxis_title="Bias (α̂ − α)",
+            yaxis_range=[-5,5]
         )
 
         file_name = (
@@ -62,7 +63,7 @@ def task_plot_bias_boxplots(
 
 
 
-def task_plot_mse(   
+def _plot_mse(   
     depends: Path = BLD_data / "monte_carlo_merged_v2.csv",
     produces: Path = BLD_figures / "mse_plots" / "mse_validation.txt",
 ) -> None:
@@ -99,11 +100,15 @@ def task_plot_mse(
             color="estimator",
             markers=True,
         )
-        fig.update_yaxes(type="log", title_text="MSE of α̂")
+        fig.update_yaxes(
+            # type="log",
+            title_text="MSE of α̂",
+        )
         fig.update_xaxes(title_text="Sample size (n)")
         fig.update_layout(
             title=f"MSE vs n (p={p_val}, μ={mu_val}, τ={tau_val})",
             legend_title_text="Estimator",
+            yaxis_range=[-0.5,3],
         )
 
         file_name = f"mse_vs_n_estimator-all_p-{p_val}_mu-{mu_val}_tau-{tau_val}.png"
@@ -116,7 +121,7 @@ def task_plot_mse(
     if expected == found:
         produces.write_text("All MSE plots generated")
 
-def task_plot_coverage_lines(
+def _plot_coverage_lines(
     depends: Path = BLD_data / "monte_carlo_merged_v2.csv",
     produces: Path = BLD_figures / "coverage_lines" / "coverage_validation.txt",
 ) -> None:
@@ -158,7 +163,7 @@ def task_plot_coverage_lines(
             annotation_text="target=0.95",
             annotation_position="top left",
         )
-        fig.update_yaxes(range=[0.0, 1.0])
+        fig.update_yaxes(range=[-0.1, 1.1])
         fig.update_layout(
             title=(
                 "Coverage vs n "
@@ -182,7 +187,7 @@ def task_plot_coverage_lines(
         produces.write_text("All coverage plots generated")
 
 
-def task_plot_ci_length(
+def _plot_ci_length(
     depends: Path = BLD_data / "monte_carlo_merged_v2.csv",
     produces: Path = BLD_figures / "ci_length_plots" / "ci_validation.txt",
 ) -> None:
@@ -202,41 +207,58 @@ def task_plot_ci_length(
 
     for (estimator, p_val, mu_val, tau_val), dfi in df.groupby(group_cols):
         alpha_true = float(dfi["alpha_true"].iloc[0])
+        # Summary of CI lengths by CI version and n
         ci_summ = (
             dfi.groupby(["ci_version", "n"], as_index=False)
                .agg(mean_ci_length=("ci_length", "mean"))
                .sort_values(["ci_version", "n"])
         )
-        ci_summ["alpha_center"] = alpha_true
-        ci_summ["ci_half"] = ci_summ["mean_ci_length"] / 2.0
+        ci_summ = ci_summ[ci_summ["ci_version"]!="wald-sigma2"]
+
+        # Mean alpha_hat by n (the center of the CIs)
         ahat = (
             dfi.groupby("n", as_index=False)
                .agg(mean_alpha_hat=("alpha_hat", "mean"))
                .sort_values("n")
         )
+
+        # Merge so each (ci_version, n) has the correct center
+        ci_summ = ci_summ.merge(ahat, on="n", how="left")
+        ci_summ["ci_half"] = ci_summ["mean_ci_length"] / 2.0
+
+        # Scatter with error bars centered at mean_alpha_hat
         fig = px.scatter(
             ci_summ,
             x="n",
-            y="alpha_center",
+            y="mean_alpha_hat",
             error_y="ci_half",
             color="ci_version",
             title=(
                 "Avg CI length vs n "
                 f"(estimator={estimator}, p={p_val}, μ={mu_val}, τ={tau_val})"
             ),
-            labels={"n": "n", "alpha_center": "α", "ci_version": "CI version"},
+            labels={"n": "n", "mean_alpha_hat": "α̂", "ci_version": "CI version"},
         )
+
+        # Overlay the mean α̂ line
         fig_alpha = px.line(ahat, x="n", y="mean_alpha_hat", markers=True)
         fig_alpha.update_traces(name="mean α̂", showlegend=True)
         for tr in fig_alpha.data:
             fig.add_trace(tr)
+
+        # True α reference
         fig.add_hline(
             y=alpha_true,
             line_dash="dash",
             annotation_text=f"α={alpha_true}",
             annotation_position="top left",
         )
-        fig.update_layout(xaxis_title="n", yaxis_title="α", legend_title="Series")
+        fig.update_layout(
+            xaxis_title="n",
+            yaxis_title="α",
+            yaxis_range=[-3, 3],
+            legend_title="Series",
+        )
 
         file_name = (
             f"ci_len_vs_n_estimator-{estimator}_p-{p_val}_mu-{mu_val}_tau-{tau_val}.png"
