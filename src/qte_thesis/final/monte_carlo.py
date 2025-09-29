@@ -16,7 +16,7 @@ from qte_thesis.analysis.standard_error import StandardErrorEstimator
 
 @dataclass
 class SimulationConfig:
-    """Configuration for the Monte Carlo experiment.
+    """Configuration for the Monte Carlo Simulation.
 
     Parameters
     ----------
@@ -25,15 +25,14 @@ class SimulationConfig:
         iterate over.
     mu_vals : iterable of float, optional
         Values for the heteroscedasticity parameter ``mu``.  Setting ``mu=0``
-        yields a homoscedastic design.  The default compares homoscedastic and
-        heteroscedastic designs ``(0.0, 1.0)``.
+        yields a homoscedastic design, ``mu=1`` yields heteroscedasticity.
     n_sim : int, optional
         Number of Monte Carlo replications for each scenario.
     alpha_true : float, optional
         True treatment effect used in the data generating process.
     seed : int, optional
         Base seed for reproducibility; a different seed is drawn for each
-        replication to avoid perfect correlation across scenarios.
+        replication to avoid perfect correlation across repetitions.
     """
 
     n_vals: Iterable[int]
@@ -74,8 +73,7 @@ def run_simulation(cfg: SimulationConfig) -> pd.DataFrame:
                 # Wald intervals for each of the three SEs
                 for se_name in ["sigma1", "sigma2", "sigma3"]:
                     lo, hi = se_est.ci_wald(alpha_hat, X, d, y, which=se_name)
-                    sigma_hat = float(getattr(se_est, f"se_{se_name}")(X, d, y))  # asymptotic σ̂_k
-                    se_used = float(sigma_hat / np.sqrt(n))                      # finite-sample SE used
+                    sigma_hat = float(getattr(se_est, f"se_{se_name}")(X, d, y))
                     rows.append(
                         {
                             "rep": rep,
@@ -95,11 +93,9 @@ def run_simulation(cfg: SimulationConfig) -> pd.DataFrame:
                             "ci_length": float(hi - lo),
                             "support": support,
                             "sigma_hat": sigma_hat,
-                            "se_used": se_used,
                         }
                     )
-
-                # Score-based interval (no per-k SE)
+                # Score interval
                 lo_s, hi_s = se_est.ci_score(X, d, y, which=est.__class__.__name__)
                 rows.append(
                     {
@@ -120,7 +116,6 @@ def run_simulation(cfg: SimulationConfig) -> pd.DataFrame:
                         "ci_length": float(hi_s - lo_s),
                         "support": support,
                         "sigma_hat": float("nan"),
-                        "se_used": float("nan"),
                     }
                 )
     df = pd.DataFrame.from_records(rows)

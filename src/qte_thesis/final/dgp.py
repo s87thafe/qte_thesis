@@ -39,7 +39,7 @@ def sim_dgp(
     alpha: float
         True treatment effect.
     mu: float
-        Strength of heteroskedasticity in the error term.
+        Binary indicator for heteroskedasticity in the error term.
     c_beta, a_beta: float
         Parameters controlling sparsity of ``beta``.
     c_gamma, a_gamma: float
@@ -62,7 +62,7 @@ def sim_dgp(
     Sigma = rho ** np.abs(idx[:, None] - idx[None, :])
     Z = rng.multivariate_normal(np.zeros(p), Sigma, size=n)
 
-    # Approximately sparse coefficients via polynomial decay
+    # Approximately sparse coefficients via power law decay
     beta = _powerlaw_coeffs(p, c_beta, a_beta, rng, sign="rademacher")
     gamma = _powerlaw_coeffs(p, c_gamma, a_gamma, rng, sign="rademacher")
 
