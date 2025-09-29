@@ -9,7 +9,7 @@ from scipy.stats import norm
 from qte_thesis.config import BLD_data, BLD_figures
 
 
-def _plot_bias_boxplots(
+def task_plot_bias_boxplots(
     depends: Path = BLD_data / "monte_carlo_merged_v2.csv",
     produces: Path = BLD_figures / "bias_boxplots" / "box_validation.txt",
 ) -> None:
@@ -61,17 +61,11 @@ def _plot_bias_boxplots(
 
 
 
-def _plot_mse(   
+def task_plot_mse(   
     depends: Path = BLD_data / "monte_carlo_merged_v2.csv",
     produces: Path = BLD_figures / "mse_plots" / "mse_validation.txt",
 ) -> None:
-    """
-    For each (p, mu, tau) combination, create a Plotly line chart:
-    - x: n
-    - y: MSE (log scale)
-    - one line per estimator
-    Save PNGs to output_dir with filenames mirroring the bias-boxplot naming scheme.
-    """
+    """Save PNGs to output_dir with filenames mirroring the bias-boxplot naming scheme."""
     df = pd.read_csv(depends)
 
     df["squared_error"] = (df["alpha_hat"] - df["alpha_true"]) ** 2
@@ -81,7 +75,6 @@ def _plot_mse(
         df = df.dropna(subset=["alpha_hat", "alpha_true"])
         df = df[(abs(df["squared_error"]) <= 100)].copy()
 
-    # Aggregate MSE per (estimator, n, p, mu, tau)
     mse_df = (
         df.groupby(["estimator", "n", "p", "mu", "tau"], dropna=False)["squared_error"]
         .mean()
@@ -154,8 +147,7 @@ def task_plot_coverage_lines(
         .unique()
     )
 
-    # choose a palette and freeze a mapping (one color per CI label)
-    palette = px.colors.qualitative.D3  # or Plotly/Safe/Set2, etc.
+    palette = px.colors.qualitative.D3
     ci_color_map = {ci: palette[i % len(palette)] for i, ci in enumerate(ci_order)}
 
     omit_outlier = True
@@ -217,7 +209,7 @@ def task_plot_coverage_lines(
         produces.write_text("All coverage plots generated")
 
 
-def _plot_ci_length(
+def task_plot_ci_length(
     depends: Path = BLD_data / "monte_carlo_merged_v2.csv",
     produces: Path = BLD_figures / "ci_length_plots" / "ci_validation.txt",
 ) -> None:
@@ -244,15 +236,11 @@ def _plot_ci_length(
                .sort_values(["ci_version", "n"])
         )
         ci_summ = ci_summ[ci_summ["ci_version"]!="wald-sigma2"]
-
-        # Mean alpha_hat by n (the center of the CIs)
         ahat = (
             dfi.groupby("n", as_index=False)
                .agg(mean_alpha_hat=("alpha_hat", "mean"))
                .sort_values("n")
         )
-
-        # Merge so each (ci_version, n) has the correct center
         ci_summ = ci_summ.merge(ahat, on="n", how="left")
         ci_summ["ci_half"] = ci_summ["mean_ci_length"] / 2.0
 
@@ -274,20 +262,11 @@ def _plot_ci_length(
             ),
             labels={"x_pos": "n", "mean_alpha_hat": "α̂", "ci_version": "CI version"},
         )
-
-        # Overlay the mean α̂ line
         fig_alpha = px.line(ahat, x="n", y="mean_alpha_hat", markers=True)
         fig_alpha.update_traces(name="mean α̂", showlegend=True)
         for tr in fig_alpha.data:
             fig.add_trace(tr)
 
-        # # True α reference
-        # fig.add_hline(
-        #     y=alpha_true,
-        #     line_dash="dash",
-        #     annotation_text=f"α={alpha_true}",
-        #     annotation_position="top left",
-        # )
         if estimator == "OS":
             fig.update_layout(
                 xaxis_title="n",
@@ -314,60 +293,3 @@ def _plot_ci_length(
     actual_pngs = sorted(p.name for p in produces.parent.glob("*.png"))
     if expected == len(actual_pngs):
         produces.write_text("All CI length plots generated")
-
-
-# def task_plot_bias_boxplots(
-#     depends: Path = BLD_data / "monte_carlo_merged.csv",
-#     produces: Path = BLD_figures / "bias_boxplots" / "box_validation.txt",
-# ) -> None:
-#     """Create QQ plots of studentized √n-errors vs N(0,1) for each parameter combination."""
-
-#     df = pd.read_csv(depends)
-#     df["_t"] = np.sqrt(df["n"].astype(float)) * (
-#         df["alpha_hat"].astype(float) - df["alpha_true"].astype(float)
-#     ) / df["sigma_hat"].astype(float)
-
-#     produces.parent.mkdir(parents=True, exist_ok=True)
-
-#     group_cols = ["estimator", "se", "p", "mu", "tau", "n"]
-#     generated_filenames = []
-
-#     for key, dfi in df.groupby(group_cols):
-#         estimator, se_name, p_val, mu_val, tau_val, n_val = key
-
-#         s = np.sort(dfi["_t"].to_numpy(dtype=float))
-#         m = s.size
-#         if m == 0:
-#             continue
-#         probs = (np.arange(1, m + 1) - 0.5) / m
-#         theo = norm.ppf(probs)  # SciPy
-
-#         qqdf = pd.DataFrame({"theoretical": theo, "sample": s})
-#         fig = px.scatter(qqdf, x="theoretical", y="sample")
-
-#         lo = float(min(qqdf["theoretical"].min(), qqdf["sample"].min()))
-#         hi = float(max(qqdf["theoretical"].max(), qqdf["sample"].max()))
-#         # 45° line without go.Scatter
-#         fig.add_shape(type="line", x0=lo, y0=lo, x1=hi, y1=hi)
-
-#         fig.update_layout(
-#             title=(
-#                 "QQ plot: √n(α̂−α)/σ̂ vs N(0,1) "
-#                 f"(estimator={estimator}, se={se_name}, p={p_val}, μ={mu_val}, τ={tau_val}, n={n_val})"
-#             ),
-#             xaxis_title="Theoretical N(0,1) quantiles",
-#             yaxis_title="Sample quantiles",
-#             showlegend=False,
-#         )
-
-#         file_name = (
-#             f"qq_estimator-{estimator}_se-{se_name}_p-{p_val}_mu-{mu_val}_tau-{tau_val}_n-{n_val}.png"
-#         )
-#         fig.write_image(produces.parent / file_name)
-#         generated_filenames.append(file_name)
-
-#     expected = len(generated_filenames)
-#     actual_pngs = sorted(p.name for p in produces.parent.glob("*.png"))
-#     found = len(actual_pngs)
-#     if expected == found:
-#         produces.write_text("All QQ plots generated")

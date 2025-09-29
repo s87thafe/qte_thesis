@@ -73,7 +73,6 @@ def sim_dgp(
     u = sigma * rng.normal(size=n)
     y = alpha * d + Z @ beta + u
 
-    # Design matrix (optionally with intercept)
     if include_intercept:
         X = np.column_stack([np.ones(n), Z])
         xcols = ["const"] + [f"x{i+1}" for i in range(p)]

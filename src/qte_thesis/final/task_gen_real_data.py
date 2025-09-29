@@ -76,7 +76,7 @@ def task_generate_dataset(
 
     employed = employed.loc[:, existing].copy()
 
-    # columns to dummy-encode (drop continuous)
+    # columns to dummy-encode
     categorical_columns = [
         'REGION','STATEFIP','COUNTY','METFIPS','METRO','CBSASZ','OWNERSHP','PUBHOUS','RENTSUB',
         'HEATSUB','FOODSTMP','STAMPMO','LUNCHSUB','UNITSSTR','PHONE','SEX','RACE','MARST','ASIAN',
