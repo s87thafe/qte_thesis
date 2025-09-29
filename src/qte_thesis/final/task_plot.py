@@ -9,27 +9,23 @@ from scipy.stats import norm
 from qte_thesis.config import BLD_data, BLD_figures
 
 
-def task_plot_bias_boxplots(
+def _plot_bias_boxplots(
     depends: Path = BLD_data / "monte_carlo_merged_v2.csv",
     produces: Path = BLD_figures / "bias_boxplots" / "box_validation.txt",
 ) -> None:
-    """Create bias-vs-n boxplots for each parameter combination.
-
-    For each combination of estimator, p, mu, and tau, a boxplot of the bias
-    (α̂ − α) across Monte Carlo replications is saved. A dashed horizontal line
-    at zero indicates the true value (no bias).
-    """
+    """Create bias-vs-n boxplots for each parameter combination."""
 
     df = pd.read_csv(depends)
-    # df["bias"] = df["alpha_hat"] - df["alpha_true"]
 
     produces.parent.mkdir(parents=True, exist_ok=True)
 
     group_cols = ["estimator", "p", "mu", "tau"]
     generated_filenames = []
+    x_order = [100, 200, 300, 500, 700, 1000]
     for key, dfi in df.groupby(group_cols):
 
         estimator, p_val, mu_val, tau_val = key
+        mu_val = int(mu_val)
         alpha_true = dfi["alpha_true"].iloc[0]
 
         fig = px.box(dfi, x="n", y="alpha_hat")
@@ -40,14 +36,16 @@ def task_plot_bias_boxplots(
             annotation_position="top left",
         )
         fig.update_layout(
-            title=(
-                "Bias vs n "
-                f"(estimator={estimator}, p={p_val}, μ={mu_val}, τ={tau_val})"
-            ),
+        title=(
+            f"Boxplot of α̂ and α, by sample size n — {estimator}; p={p_val}, μ={mu_val}, τ={tau_val}"
+        ),
             xaxis_title="n",
-            yaxis_title="Bias (α̂ − α)",
-            yaxis_range=[-5,5]
+            yaxis_title="α̂ and α",
+            yaxis_range=[-4,6],
+            xaxis=dict(tickmode="array", tickvals=x_order, ticktext=[str(v) for v in x_order]),
         )
+        fig.update_xaxes(showgrid=True)
+        fig.update_yaxes(showgrid=True)
 
         file_name = (
             f"bias_vs_n_estimator-{estimator}_p-{p_val}_mu-{mu_val}_tau-{tau_val}.png"
@@ -75,7 +73,13 @@ def _plot_mse(
     Save PNGs to output_dir with filenames mirroring the bias-boxplot naming scheme.
     """
     df = pd.read_csv(depends)
+
     df["squared_error"] = (df["alpha_hat"] - df["alpha_true"]) ** 2
+
+    omit_outlier = True
+    if omit_outlier:
+        df = df.dropna(subset=["alpha_hat", "alpha_true"])
+        df = df[(abs(df["squared_error"]) <= 100)].copy()
 
     # Aggregate MSE per (estimator, n, p, mu, tau)
     mse_df = (
@@ -85,14 +89,16 @@ def _plot_mse(
         .sort_values(["p", "mu", "tau", "estimator", "n"])
         .reset_index(drop=True)
     )
+    # mse_df["rmse"] = np.sqrt(mse_df["mse"])
 
     produces.parent.mkdir(parents=True, exist_ok=True)
 
     group_cols = ["p", "mu", "tau"]
     generated_filenames = []
+    x_order = [100, 200, 300, 500, 700, 1000]
     for key, dfi in mse_df.groupby(group_cols, dropna=False):
         p_val, mu_val, tau_val = key
-
+        mu_val = int(mu_val)
         fig = px.line(
             dfi.sort_values(["n", "estimator"]),
             x="n",
@@ -101,15 +107,19 @@ def _plot_mse(
             markers=True,
         )
         fig.update_yaxes(
-            # type="log",
+            type="log",
+            range=[np.log10(0.001), np.log10(5)],
             title_text="MSE of α̂",
         )
         fig.update_xaxes(title_text="Sample size (n)")
         fig.update_layout(
             title=f"MSE vs n (p={p_val}, μ={mu_val}, τ={tau_val})",
             legend_title_text="Estimator",
-            yaxis_range=[-0.5,3],
+            xaxis=dict(tickmode="array", tickvals=x_order, ticktext=[str(v) for v in x_order]),
         )
+        
+        fig.update_xaxes(showgrid=True)
+        fig.update_yaxes(showgrid=True)
 
         file_name = f"mse_vs_n_estimator-all_p-{p_val}_mu-{mu_val}_tau-{tau_val}.png"
         fig.write_image(produces.parent / file_name)
@@ -121,7 +131,7 @@ def _plot_mse(
     if expected == found:
         produces.write_text("All MSE plots generated")
 
-def _plot_coverage_lines(
+def task_plot_coverage_lines(
     depends: Path = BLD_data / "monte_carlo_merged_v2.csv",
     produces: Path = BLD_figures / "coverage_lines" / "coverage_validation.txt",
 ) -> None:
@@ -136,6 +146,22 @@ def _plot_coverage_lines(
         df["ci"].astype(str),
     )
 
+    ci_order = (
+        df["ci_version"]
+        .dropna()
+        .astype(str)
+        .sort_values()
+        .unique()
+    )
+
+    # choose a palette and freeze a mapping (one color per CI label)
+    palette = px.colors.qualitative.D3  # or Plotly/Safe/Set2, etc.
+    ci_color_map = {ci: palette[i % len(palette)] for i, ci in enumerate(ci_order)}
+
+    omit_outlier = True
+    if omit_outlier:
+        df = df.dropna(subset=["lo", "hi"])
+
     cov_ver = (
         df.groupby(["estimator", "p", "mu", "tau", "n", "ci_version"], dropna=False)["covered"]
         .mean()
@@ -144,17 +170,20 @@ def _plot_coverage_lines(
 
     group_cols = ["estimator", "p", "mu", "tau"]
     generated_filenames = []
-
+    x_order = [100, 200, 300, 500, 700, 1000]
     for (estimator, p_val, mu_val, tau_val), dfi in cov_ver.groupby(group_cols, sort=False):
+        mu_val = int(mu_val)
         dfi = dfi.sort_values("n")
 
         fig = px.line(
-            dfi,
+            dfi.sort_values("n"),
             x="n",
             y="coverage",
             color="ci_version",
             markers=True,
             labels={"n": "n", "coverage": "Coverage probability", "ci_version": "CI"},
+            color_discrete_map=ci_color_map,
+            category_orders={"ci_version": list(ci_order)},
         )
 
         fig.add_hline(
@@ -172,6 +201,7 @@ def _plot_coverage_lines(
             xaxis_title="n",
             yaxis_title="Coverage probability",
             legend_title_text="CI",
+            xaxis=dict(tickmode="array", tickvals=x_order, ticktext=[str(v) for v in x_order]),
             margin=dict(l=60, r=20, t=60, b=50),
         )
 
@@ -204,7 +234,7 @@ def _plot_ci_length(
 
     group_cols = ["estimator", "p", "mu", "tau"]
     generated_filenames = []
-
+    x_order = [100, 200, 300, 500, 700, 1000]
     for (estimator, p_val, mu_val, tau_val), dfi in df.groupby(group_cols):
         alpha_true = float(dfi["alpha_true"].iloc[0])
         # Summary of CI lengths by CI version and n
@@ -226,10 +256,15 @@ def _plot_ci_length(
         ci_summ = ci_summ.merge(ahat, on="n", how="left")
         ci_summ["ci_half"] = ci_summ["mean_ci_length"] / 2.0
 
+        ci_versions = ci_summ["ci_version"].unique()
+        offsets = np.linspace(-0.18, 0.18, len(ci_versions))  
+        offset_map = dict(zip(ci_versions, offsets))
+        ci_summ["x_pos"] = ci_summ["n"] + ci_summ["ci_version"].map(offset_map)
+
         # Scatter with error bars centered at mean_alpha_hat
         fig = px.scatter(
             ci_summ,
-            x="n",
+            x="x_pos",
             y="mean_alpha_hat",
             error_y="ci_half",
             color="ci_version",
@@ -237,7 +272,7 @@ def _plot_ci_length(
                 "Avg CI length vs n "
                 f"(estimator={estimator}, p={p_val}, μ={mu_val}, τ={tau_val})"
             ),
-            labels={"n": "n", "mean_alpha_hat": "α̂", "ci_version": "CI version"},
+            labels={"x_pos": "n", "mean_alpha_hat": "α̂", "ci_version": "CI version"},
         )
 
         # Overlay the mean α̂ line
@@ -246,19 +281,28 @@ def _plot_ci_length(
         for tr in fig_alpha.data:
             fig.add_trace(tr)
 
-        # True α reference
-        fig.add_hline(
-            y=alpha_true,
-            line_dash="dash",
-            annotation_text=f"α={alpha_true}",
-            annotation_position="top left",
-        )
-        fig.update_layout(
-            xaxis_title="n",
-            yaxis_title="α",
-            yaxis_range=[-3, 3],
-            legend_title="Series",
-        )
+        # # True α reference
+        # fig.add_hline(
+        #     y=alpha_true,
+        #     line_dash="dash",
+        #     annotation_text=f"α={alpha_true}",
+        #     annotation_position="top left",
+        # )
+        if estimator == "OS":
+            fig.update_layout(
+                xaxis_title="n",
+                yaxis_title="α",
+                yaxis_range=[0, 2],
+                legend_title="Series",
+            )
+        else:
+            fig.update_layout(
+                xaxis_title="n",
+                yaxis_title="α",
+                yaxis_range=[-3, 3],
+                legend_title="Series",
+                xaxis=dict(tickmode="array", tickvals=x_order, ticktext=[str(v) for v in x_order]),
+            )
 
         file_name = (
             f"ci_len_vs_n_estimator-{estimator}_p-{p_val}_mu-{mu_val}_tau-{tau_val}.png"

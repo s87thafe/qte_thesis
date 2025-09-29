@@ -212,5 +212,8 @@ bld/
 # data
 src/data
 
+# bld
+src/qte_thesis/final/Marvin_files/
+
 # bin
 bin/
